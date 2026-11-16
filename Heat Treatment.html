@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heat Treatment Shop</title>
+<style>
+:root{--paper:#edeff0;--panel:#fff;--ink:#17222b;--steel:#5d6b75;--line:#d3d9dc;--heat:#c4501f;--ok:#1f7a45;--bad:#b3261e;--brand:#1f3a4d;--tint:#f3f5f6}
+@media(prefers-color-scheme:dark){:root{--paper:#12181c;--panel:#1b242a;--ink:#e8edef;--steel:#95a3ad;--line:#2c3840;--heat:#ef7a3c;--ok:#52c283;--bad:#ff7b72;--brand:#2a5470;--tint:#202b32}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 Bahnschrift,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--brand);color:#fff;border-bottom:4px solid var(--heat)}
+.hin{max-width:720px;margin:0 auto;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+h1{font-size:1.35rem;margin:0;font-weight:700}.hin span{font-size:.85rem;opacity:.75}
+.score{background:rgba(255,255,255,.14);padding:6px 14px;border-radius:4px;font-weight:700;white-space:nowrap}
+main{max-width:720px;margin:0 auto;padding:16px 14px 48px}
+section,details{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+h2{font-size:1.2rem;margin:0 0 4px}.eyebrow{font-size:.8rem;color:var(--steel)}
+.tags span{display:inline-block;background:var(--tint);border:1px solid var(--line);border-radius:3px;padding:1px 8px;font-size:.85rem}
+.sub{display:block;margin:12px 0 2px;font-size:.8rem;color:var(--steel)}
+.spec{display:grid;grid-template-columns:1fr auto;gap:0 12px}.spec span{padding:5px 0;border-top:1px solid var(--line)}.spec span:nth-child(even){font-weight:700;text-align:right}
+.step{border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:12px;background:var(--tint)}
+.step>b{display:block;margin:8px 0 2px;font-size:.78rem;color:var(--steel);font-weight:600}.step>b:first-child{margin-top:0;font-size:.95rem;color:var(--ink)}
+.step p{margin:0 0 6px;font-size:.88rem}
+.step input[type=range]{width:100%;accent-color:var(--heat);margin:6px 0}.opt{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px;margin:4px 0 8px}.opt small{color:inherit;opacity:.8}
+button{font:inherit;font-size:.92rem;border:1px solid var(--line);background:var(--tint);color:var(--ink);padding:9px 8px;border-radius:4px;cursor:pointer}
+.step button{background:var(--panel)}button:hover{border-color:var(--steel)}
+button.on{background:var(--brand);border-color:var(--brand);color:#fff}button.go{background:var(--heat);border-color:var(--heat);color:#fff;font-weight:700;padding:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.row button{flex:1}
+svg{width:100%;height:auto;display:block;margin-top:10px}svg text{font-family:inherit}
+.lg{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8rem;color:var(--steel);margin-top:4px}.lg i{display:inline-block;width:14px;height:3px;margin-right:5px;vertical-align:middle}
+table{width:100%;border-collapse:collapse}td{padding:6px 4px;border-top:1px solid var(--line)}td:nth-child(n+2){text-align:right}
+.p{color:var(--ok);font-weight:700}.f{color:var(--bad);font-weight:700}
+.banner{font-size:1.4rem;font-weight:700;padding:4px 0 8px}
+.bar{display:flex;height:12px;border:1px solid var(--line);margin:2px 0 8px}
+.sect{display:flex;gap:14px;align-items:center;margin-bottom:10px}.sect svg{width:130px;flex:none;margin:0}
+small,.note{color:var(--steel)}ul{margin:6px 0 0;padding-left:18px}
+summary{cursor:pointer}details h3{font-size:1rem;margin:14px 0 4px}details li{margin-bottom:4px}.sw{display:inline-block;width:12px;height:12px;margin-right:6px;border:1px solid var(--line)}
+</style></head><body><header><div class="hin"><div><h1>Heat Treatment Shop</h1><span>Steel bar heat treatment trainer</span></div><div class="score" id="score"></div></div></header><main>
+<details id="learn" open></details>
+<section id="order"></section>
+<section><h2>Furnace programme</h2><div id="steps"></div>
+<div class="row"><button onclick="addStep()">Add step</button></div>
+<svg id="curve" viewBox="0 0 360 215" role="img" aria-label="Time temperature chart"></svg><div class="lg" id="lg"></div>
+<div class="row"><button class="go" onclick="run()">Run furnace and test</button></div></section>
+<section id="res" hidden></section>
+<script>
+const $=s=>document.querySelector(s),cl=(x,a=0,b=1)=>Math.max(a,Math.min(b,x)),ss=x=>{x=cl(x);return x*x*(3-2*x)};
+const H={furnace:.002,air:.02,oil:.35,water:1},F=[.4,.7,1],CN={furnace:'Furnace cool',air:'Air cool',oil:'Oil quench',water:'Water quench'},RATE={furnace:1.5,air:8,oil:60,water:150};
+const G={
+S275:{nm:'S275',C:.2,a1:725,a3:850,DI:12,hn:135,ha:118,r:.64,J:70,sh:0},
+S355:{nm:'S355',C:.22,a1:725,a3:845,DI:16,hn:160,ha:140,r:.7,J:75,sh:0},
+S460:{nm:'S460 (HSLA)',C:.18,a1:725,a3:860,DI:22,hn:180,ha:155,r:.8,J:90,sh:0},
+C45:{nm:'C45 / 1045',C:.45,a1:725,a3:780,DI:22,hn:190,ha:165,r:.58,J:35,sh:0},
+'4140':{nm:'42CrMo4 / 4140',C:.4,a1:735,a3:795,DI:100,hn:240,ha:190,r:.68,J:90,sh:600,al:1},
+'8620':{nm:'8620',C:.2,a1:730,a3:830,DI:55,hn:195,ha:150,r:.62,J:80,sh:300,al:1},
+'300M':{nm:'300M',C:.42,a1:740,a3:790,DI:250,hn:380,ha:300,r:.7,J:40,sh:1400,al:1}};
+const TY={N:'Normalised (+N)',A:'Annealed (+A)',QT:'Quenched and tempered (+QT)',SR:'Stress relieved'};
+const ORD=[['S275','N'],['S275','A'],['S355','N'],['S355','SR'],['S460','N'],['C45','N'],['C45','QT'],['4140','QT'],['4140','N'],['4140','SR'],['8620','N'],['8620','A'],['300M','QT']];
+const CUST=['Hartwell Forge','Brightline Rail','Northgate Offshore','Calder Hydraulics','Meridian Aerospace','Pennine Plant','Tideway Marine','Ashby Drivetrains'];
+const hv=(g,s)=>{const m=230+1000*g.C,tf=s.P<9000?1:1-.62*ss((s.P-9000)/9500);return s.fp*s.hp+(s.b*.65+s.m)*m*tf};
+function relieve(s,T,t){s.res*=1-Math.min(.95,cl((T-150)/450)*Math.min(1,.4+t/200))}
+function sim(g,D,steps,res0){
+ const N=new Set(),need=D*1.5,cT=g.a3+150;let hrs=0,cr=0;
+ const S=F.map(()=>({fp:1,b:0,m:0,P:0,hp:g.hn*1.04,g:0,e:0,sn:0,res:res0,nT:0}));
+ steps.forEach((st,i)=>{const{T,t,c}=st,h=H[c],n='Step '+(i+1)+': ';hrs+=t/60;
+  if(T>=g.a1){
+   const a0=cl((T-g.a1)/(g.a3-g.a1));
+   if(a0<1)N.add(n+'below '+g.a3+' °C, so only part of the steel turned to austenite.');
+   else if(t<need*.9)N.add(n+'hold too short for '+D+' mm: the core is only '+Math.min(99,Math.round(t/(need*.9)*100))+'% through-heated. Allow about 1.5 min per mm.');
+   S.forEach((s,k)=>{const f=F[k],a=a0*cl(t/(need*.9*f)),DI=g.DI*(T>cT?1.15:1),Dc=DI*h/(h+.25),M=1/(1+Math.pow(D*f/Dc,3)),B=(1-M)*Math.min(.9,h*1.4+(g.DI>=50&&h>=.02&&h<.1?cl(1-D*f/150)*.5:0)),FP=1-M-B,hpN=c=='furnace'?g.ha:c=='air'?g.hn:g.hn*1.04,w=1-a,np=w*s.fp+a*FP;
+    s.hp=np>1e-3?(w*s.fp*s.hp+a*FP*hpN)/np:hpN;s.fp=np;s.b=w*s.b+a*B;s.m=w*s.m+a*M;s.P*=w;
+    s.res=w*s.res+a*Math.pow(h,.7)*Math.sqrt(D*f/100)*(.15+M+.5*B);
+    if(a>.5){s.g=(T>cT||t>need*2.5)?1:0;s.e=0}
+    if(k==0&&a>.5&&h>=.35&&M*((230+1000*g.C)/650)*Math.pow(h,.6)*Math.sqrt(D/120)>.7){cr=1;N.add(n+'the surface hardened and shrank faster than the core could follow. The bar cracked. Use a gentler quench for this grade and size.')}
+    if(k==2&&c!='furnace'&&c!='air'&&M<.5&&g.DI<60&&a>.5)N.add(n+'at '+D+' mm the core cooled too slowly to harden. This is the mass effect.')});
+   if(t>need*2.5&&a0>0)N.add(n+'held far too long: grains grew, costing toughness and furnace time.');
+   if(T>cT)N.add(n+'overheated above '+cT+' °C: grains coarsened, which costs toughness. Re-normalising refines them.');
+  }else{
+   const pe=(T+273)*(20+Math.log10(Math.max(t,1)/60))-g.sh;
+   S.forEach(s=>{s.P=Math.max(s.P,pe);if(s.m+s.b>.05&&T>=150)s.nT++;relieve(s,T,t);s.res=Math.max(s.res,.3*h*Math.sqrt(D/100));
+    if(g.al&&T>=450&&T<=575&&c=='furnace')s.e=1});
+   if(g.al&&T>=450&&T<=575&&c=='furnace')N.add(n+'slow cooling through 450–575 °C causes temper embrittlement in alloy steel. Cool faster after tempering.')}
+ });
+ return{S,N,hrs,cr}}
+function prop(g,s){const HV=hv(g,s),hf=s.m+s.b,ts=3.2*HV*(s.g?.97:1),ys=ts*(g.r*(1-hf)+hf*(s.P>=9000?.9:.78));
+ let J=g.J*Math.pow(HV/g.hn,-2.2);if(s.m>.2&&s.P<9000)J*=.35;if(s.e)J*=.55;if(s.g)J*=.55;if(g.nm=='300M'&&hf>.5&&s.nT<2)J*=.7;
+ return{HB:HV*.95,ts,ys,J:Math.min(J,250)}}
+const fl=(x,k)=>Math.floor(x/k)*k;
+let O,steps,fails=0,total=0;
+function newOrder(){const[k,ty]=ORD[Math.random()*ORD.length|0],g=G[k],D=[70,90,110,130,150,180,200,220][Math.random()*8|0],res0=ty=='SR'?.6:.25,rr=ref(g,ty,D),R=sim(g,D,rr,res0),p=R.S.map(s=>prop(g,s)),m=p[1];
+ O={k,g,ty,D,res0,rr,cust:CUST[Math.random()*CUST.length|0],sp:{ys:fl(m.ys*.93,5),ts:fl(m.ts*.93,5),J:fl(m.J*.7,1),lo:Math.round(p[0].HB*.9),hi:Math.round(p[0].HB*1.12),core:ty=='QT'?Math.round(p[2].HB*.88):0,tsMax:ty=='A'?Math.ceil(m.ts*1.1):0,res:ty=='SR'?Math.max(.12,Math.max(...R.S.map(s=>s.res))*1.8):0}};
+ steps=[mk('N')];fails=0;$('#res').hidden=true;draw()}
+function draw(){const s=O.sp;
+ $('#score').textContent='Score '+total;
+ $('#order').innerHTML=`<div class="eyebrow">Order from ${O.cust}</div><h2>${O.D} mm ${O.g.nm} bar</h2><div class="tags"><span>${TY[O.ty]}</span></div><p class="note">${INFO[O.k]}</p><b class="sub">Customer requirements</b><div class="spec">${spRow('Surface hardness',s.lo+'–'+s.hi+' HB')}${s.core?spRow('Core hardness','≥ '+s.core+' HB'):''}${spRow('Yield (mid-radius)','≥ '+s.ys+' MPa')}${spRow('Tensile (mid-radius)','≥ '+s.ts+(s.tsMax?' and ≤ '+s.tsMax:'')+' MPa')}${spRow('Charpy impact','≥ '+s.J+' J')}${s.res?spRow('Residual stress index','≤ '+Math.round(s.res*100)):''}${spRow('Bar condition','No cracks')}</div>`;
+ renderSteps();curve()}
+const spRow=(a,b)=>`<span>${a}</span><span>${b}</span>`;
+const TI={A:['Annealing','Heat, hold, then cool very slowly in the furnace. Gives the softest, most stable structure, which is easiest to machine.'],
+N:['Normalising','Heat until the steel is fully austenite, hold, then cool in still air. Refines the grain, giving more strength and toughness than annealing.'],
+Q:['Quench (harden)','Heat until the steel is fully austenite, hold, then cool fast in oil or water. Fast cooling traps carbon and forms hard, brittle martensite. Always temper afterwards.'],
+T:['Tempering','Reheat a quenched bar to a moderate temperature, well below the austenite range. A hotter temper is softer and tougher; a cooler temper keeps more strength.'],
+S:['Stress relief','Gentle heating well below the austenite range, then slow cooling. Relaxes locked-in stresses from rolling, straightening or quenching without changing the structure much.']};
+const CI={furnace:'Many hours of cooling. Softest result with almost no internal stress.',air:'Moderate speed. Fine structure with little stress.',oil:'Fast. Hardens alloy steels with lower crack risk than water.',water:'Fastest and harshest. Hardens plain steels but can crack alloy steels.'};
+const INFO={S275:'Low-carbon structural steel. Too little carbon to harden, so heat treatment only changes grain size and softness.',S355:'Structural steel with a little manganese. Strength comes from fine grains; quenching cannot harden it much.',S460:'HSLA: tiny niobium and vanadium particles hold the grains fine. Overheating dissolves them and toughness drops.',C45:'Medium-carbon plain steel. It hardens, but in thick bars only near the surface (low hardenability).',
+'4140':'Chromium-molybdenum alloy that hardens deeply. Oil quench and temper. Water can crack it; slow cooling after a hot temper embrittles it.','8620':'Low-carbon nickel-chromium-molybdenum steel made for carburising. Without carburising it stays fairly soft.','300M':'Ultra-high-strength steel with silicon. Very deep hardening: oil quench, then temper twice at about 300 °C. Cracks easily in water.'};
+const COOL={A:['furnace','air'],N:['air'],Q:['oil','water','air'],T:['air','furnace','water'],S:['furnace','air']},HL=['Short','Standard','Long'],DEF={A:2,N:1,Q:1,T:4,S:3};
+const fmt=m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+m%60+' min':'');
+const sh=D=>({need:Math.ceil(D*1.5/10)*10,tt:Math.max(60,Math.ceil(D*1.2/10)*10)});
+function temps(ty){const g=O.g,mid=Math.round((g.a1+g.a3)/20)*10;
+ if(ty=='A')return[g.a1-25,mid,g.a3+40];if(ty=='T')return[200,300,400,500,600,650];if(ty=='S')return[300,450,550,600,650];return[mid,g.a3+40,g.a3+170]}
+const cools=ty=>COOL[ty];
+function resolve(s){const{need,tt}=sh(O.D),b='TS'.includes(s.ty)?tt:need;return{ty:s.ty,T:temps(s.ty)[s.ti],t:s.t,c:s.c}}
+const RS=()=>steps.map(resolve);
+function mk(ty){return{ty,ti:DEF[ty],t:120,c:cools(ty)[0]}}
+function renderSteps(){const g=O.g,tys=['A','N','Q','T','S'],{need,tt}=sh(O.D);
+ $('#steps').innerHTML=steps.map((s,i)=>{const bs='TS'.includes(s.ty)?tt:need;
+ return`<div class="step"><b>Step ${i+1}: treatment</b><div class="opt">${tys.map(k=>`<button class="${s.ty==k?'on':''}" onclick="setTy(${i},'${k}')">${TI[k][0]}</button>`).join('')}</div><p class="note">${TI[s.ty][1]}</p>
+<b>Temperature</b><div class="opt">${temps(s.ty).map((T,j)=>`<button class="${s.ti==j?'on':''}" onclick="pick(${i},'ti',${j})">${T} °C</button>`).join('')}</div><p class="note">For this grade, austenite starts to form at ${g.a1} °C and the bar is fully austenite by ${g.a3} °C.</p>
+<b>Hold time: <span id="hv${i}">${fmt(s.t)}</span></b><input type="range" min="30" max="900" step="10" value="${s.t}" oninput="hold(${i},this.value)" aria-label="Hold time in minutes"><p class="note">Your ${O.D} mm bar needs time for the centre to reach temperature. Allow about 1.5 minutes per mm for heating treatments; tempering and stress relief can be a little less. Longer holds cost furnace time.</p>
+<b>Cooling</b><div class="opt">${cools(s.ty).map(c=>`<button class="${s.c==c?'on':''}" onclick="pick(${i},'c','${c}')">${CN[c]}</button>`).join('')}</div><p class="note">${CI[s.c]}</p>${steps.length>1?`<div class="row"><button onclick="steps.splice(${i},1);renderSteps();curve()">Remove step ${i+1}</button></div>`:''}</div>`}).join('')}
+function setTy(i,k){steps[i]=mk(k);renderSteps();curve()}
+function pick(i,k,v){steps[i][k]=v;renderSteps();curve()}
+function hold(i,v){steps[i].t=+v;$('#hv'+i).textContent=fmt(+v);curve()}
+function addStep(){if(steps.length<4){steps.push(mk('T'));renderSteps();curve()}}
+function ref(g,ty,D){const{need,tt}=sh(D),A=g.a3+40,m=(y,T,t,c)=>({ty:y,T,t,c});
+ if(ty=='N')return[m('N',A,need,'air')];if(ty=='A')return[m('A',A,need,'furnace')];if(ty=='SR')return[m('S',600,tt,'furnace')];
+ const q=m('Q',A,need,g.DI>=50?'oil':'water');return g.nm=='300M'?[q,m('T',300,tt,'air'),m('T',300,tt,'air')]:[q,m('T',500,tt,'air')]}
+function learn(){const sw=c=>`<i class="sw" style="background:rgb(${c})"></i>`;
+ $('#learn').innerHTML=`<summary><b>How heat treatment works</b> (tap to hide)</summary>
+<p>Steel is iron with a little carbon. Heated to roughly 725–900 °C (it depends on the grade), its crystals change to <b>austenite</b>, which can dissolve the carbon. The change starts at one temperature and is complete at a higher one, so in between the bar is only partly changed. What forms on cooling depends on how fast the steel cools:</p>
+<ul><li>${sw(COL.fp)}<b>Ferrite and pearlite:</b> slow cooling. Soft and tough.</li><li>${sw(COL.b)}<b>Bainite:</b> medium cooling. Stronger, still fairly tough.</li><li>${sw(COL.m)}<b>Martensite:</b> very fast cooling. Very hard and brittle until tempered.</li></ul>
+<p><b>The mass effect:</b> a thick bar cools from the outside in, so the core cools slower than the surface and may not harden. That is why diameter matters. Alloying elements (chromium, molybdenum, nickel) slow the change and let steel harden deeper.</p>
+<h3>Treatments</h3><ul>${Object.values(TI).map(t=>`<li><b>${t[0]}.</b> ${t[1]}</li>`).join('')}</ul>
+<h3>Cooling</h3><ul>${Object.keys(CI).map(c=>`<li><b>${CN[c]}.</b> ${CI[c]}</li>`).join('')}</ul>
+<h3>How to play</h3><p>Read the order and the grade notes. Build a programme: choose each treatment, temperature and cooling method, and set the hold time yourself. Allow about 1.5 minutes per mm of diameter for heating treatments so the centre of the bar catches up with the surface. Each test is checked against the customer's spec. Pass in fewer attempts and less furnace time for more points.</p>`}
+const CC={furnace:'#c9a227',air:'#6fa3b8',oil:'#8a6bbd',water:'#2f7fd1'};
+function curve(){const R=RS(),g=O.g;let x=0;const S=R.map(s=>{const a=x,b=a+(s.T-20)/4,c=b+s.t,d=c+(s.T-20)/RATE[s.c];x=d;return{a,b,c,d,s}});
+ const W=360,Hh=215,l=42,r=10,t=12,bt=34,pw=W-l-r,ph=Hh-t-bt,X=v=>l+v/x*pw,Y=v=>t+ph-v/1200*ph,P=(m,T)=>X(m).toFixed(1)+','+Y(T).toFixed(1),tx=(px,py,s,an='end')=>`<text x="${px}" y="${py}" font-size="9" text-anchor="${an}" fill="var(--steel)">${s}</text>`;
+ let o='';
+ o+=`<rect x="${l}" y="${t}" width="${pw}" height="${Y(g.a3)-t}" fill="var(--heat)" opacity=".13"/><rect x="${l}" y="${Y(g.a3)}" width="${pw}" height="${Y(g.a1)-Y(g.a3)}" fill="var(--heat)" opacity=".05"/>${tx(W-r-4,Y(g.a3)-4,'Fully austenite above '+g.a3+' °C')}${tx(W-r-4,Y(g.a1)+11,'Starts to change at '+g.a1+' °C')}<line x1="${l}" x2="${W-r}" y1="${Y(g.a3)}" y2="${Y(g.a3)}" stroke="var(--heat)" stroke-dasharray="4 3"/><line x1="${l}" x2="${W-r}" y1="${Y(g.a1)}" y2="${Y(g.a1)}" stroke="var(--steel)" stroke-dasharray="2 3"/>`;
+ for(let T=0;T<=1200;T+=200)o+=`<line x1="${l}" x2="${W-r}" y1="${Y(T)}" y2="${Y(T)}" stroke="var(--line)" stroke-width=".7"/>`+tx(l-5,Y(T)+3,T);
+ const hr=x/60,st=[1,2,4,6,8,12,24].find(v=>hr/v<=6)||24;
+ for(let h=0;h<=hr;h+=st)o+=`<line x1="${X(h*60)}" x2="${X(h*60)}" y1="${Y(0)}" y2="${Y(0)+4}" stroke="var(--steel)"/>`+tx(X(h*60),Y(0)+14,h,'middle');
+ o+=tx(l+pw/2,Hh-3,'Time (hours)','middle')+tx(l,t-2,'Temperature (°C)','start');
+ S.forEach((q,i)=>{o+=`<polyline fill="none" stroke="var(--heat)" stroke-width="2.6" stroke-linejoin="round" points="${P(q.a,20)} ${P(q.b,q.s.T)} ${P(q.c,q.s.T)}"/><polyline fill="none" stroke="${CC[q.s.c]}" stroke-width="2.6" points="${P(q.c,q.s.T)} ${P(q.d,20)}"/><circle cx="${X((q.b+q.c)/2)}" cy="${Y(q.s.T)-10}" r="7.5" fill="var(--brand)"/><text x="${X((q.b+q.c)/2)}" y="${Y(q.s.T)-6.7}" font-size="9" font-weight="700" text-anchor="middle" fill="#fff">${i+1}</text>`});
+ $('#curve').innerHTML=o+`<rect x="${l}" y="${t}" width="${pw}" height="${ph}" fill="none" stroke="var(--steel)"/>`;
+ $('#lg').innerHTML='<span><i style="background:var(--heat)"></i>Heating and hold</span>'+Object.keys(CN).map(c=>`<span><i style="background:${CC[c]}"></i>${CN[c]}</span>`).join('')}
+const COL={fp:[154,166,173],b:[217,162,59],m:[184,55,43]};
+function mix(s){const t=[0,0,0];[['fp'],['b'],['m']].forEach(([k])=>COL[k].forEach((c,i)=>t[i]+=c*s[k]));return`rgb(${t.map(Math.round)})`}
+function nudge(ok,R,m){if(ok)return'';const g=O.g,ty=O.ty,sp=O.sp,A=g.a3+40,L=fails>1,low=m.ys<sp.ys||m.ts<sp.ts,tough=m.J<sp.J;
+ if(R.cr)return'Cracking means the quench was too severe for this grade and size. Choose a gentler cooling medium.';
+ if(ty=='N')return'Normalising: heat until the steel is fully austenite'+(L?' (try about '+A+' °C)':'')+', hold about 1.5 min per mm, then cool in still air.';
+ if(ty=='A')return'Annealing: heat until fully austenite'+(L?' (about '+A+' °C)':'')+', hold, then cool as slowly as possible in the furnace.';
+ if(ty=='SR')return'Stress relief: a moderate temperature'+(L?' (about 600 °C)':'')+' with slow furnace cooling releases stress without changing the structure.';
+ return'Quench and temper needs two steps: harden first (fully austenite'+(L?', about '+A+' °C, '+(g.DI>=50?'oil':'water')+' quench':'')+'), then temper.'+(low?' Strength is short: check the bar hardened right through, or temper cooler.':'')+(tough?' Toughness is short: temper hotter and cool faster after tempering.':'')+(L&&g.nm=='300M'?' 300M needs two tempers.':'')}
+function run(){const g=O.g,R=sim(g,O.D,RS(),O.res0),P=R.S.map(s=>prop(g,s)),sp=O.sp,[a,m,c]=P,res=Math.max(...R.S.map(s=>s.res));
+ const ck=[['Surface hardness',Math.round(a.HB)+' HB',sp.lo+'–'+sp.hi,a.HB>=sp.lo&&a.HB<=sp.hi]];
+ if(sp.core)ck.push(['Core hardness',Math.round(c.HB)+' HB','≥ '+sp.core,c.HB>=sp.core]);
+ ck.push(['Yield (mid-radius)',Math.round(m.ys)+' MPa','≥ '+sp.ys,m.ys>=sp.ys],['Tensile (mid-radius)',Math.round(m.ts)+' MPa','≥ '+sp.ts+(sp.tsMax?', ≤ '+sp.tsMax:''),m.ts>=sp.ts&&(!sp.tsMax||m.ts<=sp.tsMax)],['Charpy impact',Math.round(m.J)+' J','≥ '+sp.J,m.J>=sp.J]);
+ if(sp.res)ck.push(['Residual stress',Math.round(res*100),'≤ '+Math.round(sp.res*100),res<=sp.res]);
+ ck.push(['Bar condition',R.cr?'CRACKED':'Sound','Sound',!R.cr]);
+ const ok=!R.cr&&ck.every(r=>r[3]);let sc=0;if(ok){sc=Math.max(10,Math.round(120-25*fails-R.hrs*3));total+=sc}else fails++;
+ const notes=[...R.N],nd=nudge(ok,R,m);if(!ok&&!notes.length)notes.push('The structure formed, but the properties miss the specification. Compare each failed line with how the treatment changes hardness and toughness.');
+ const lab=['Surface','Mid-radius','Core'];
+ const sec=`<div class="sect"><svg viewBox="0 0 140 140" role="img" aria-label="Bar cross-section"><circle cx="70" cy="70" r="66" fill="${mix(R.S[0])}"/><circle cx="70" cy="70" r="46" fill="${mix(R.S[1])}"/><circle cx="70" cy="70" r="26" fill="${mix(R.S[2])}"/></svg><div style="flex:1">${R.S.map((s,i)=>`<small>${lab[i]}: ${Math.round(s.fp*100)}% ferrite/pearlite, ${Math.round(s.b*100)}% bainite, ${Math.round(s.m*100)}% martensite</small><div class="bar"><i style="width:${s.fp*100}%;background:rgb(${COL.fp})"></i><i style="width:${s.b*100}%;background:rgb(${COL.b})"></i><i style="width:${s.m*100}%;background:rgb(${COL.m})"></i></div>`).join('')}</div></div>`;
+ const e=$('#res');e.hidden=false;e.style.borderLeftColor=ok?'var(--ok)':'var(--bad)';
+ e.innerHTML=`<div class="banner ${ok?'p':'f'}">${ok?'PASSED  +'+sc+' points':R.cr?'CRACKED: scrapped':'FAILED'}</div>${sec}<table>${ck.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td><small>${r[2]}</small></td><td class="${r[3]?'p':'f'}">${r[3]?'Pass':'Fail'}</td></tr>`).join('')}</table>${notes.length?'<h2 style="margin-top:12px">What happened</h2><ul>'+notes.map(n=>`<li>${n}</li>`).join('')+'</ul>':''}${nd?'<h2 style="margin-top:12px">Hint</h2><p>'+nd+'</p>':''}<div class="row">${ok?'':'<button onclick="window.scrollTo(0,0)">Adjust programme</button>'}<button class="${ok?'go':''}" onclick="newOrder();scrollTo(0,0)">${ok?'Next order':'Skip order'}</button></div>`;
+ $('#score').textContent='Score '+total;e.scrollIntoView({behavior:'smooth'})}
+learn();newOrder();
+</script></main></body></html>
